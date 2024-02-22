@@ -1,4 +1,4 @@
-import { Plus, Search, FileDown, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, FileDown, MoreHorizontal, Filter } from 'lucide-react'
 
 import { Button } from './components/ui/button'
 import { Header } from './components/header'
@@ -16,6 +16,7 @@ import { Pagination } from './components/pagination'
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
+import { FormEvent, useState } from 'react'
 
 interface Tag {
   title: string
@@ -34,15 +35,18 @@ interface TagResponse {
 }
 
 export function App() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const urlFilter = searchParams.get('filter') ?? ''
+  const [filter, setFilter] = useState(urlFilter)
 
   const page = searchParams.get('page') ? Number(searchParams.get('page')) : 1
 
   const { data: tagsResponse, isLoading } = useQuery<TagResponse>({
-    queryKey: ['get-tags', page],
+    queryKey: ['get-tags', page, urlFilter],
     queryFn: async () => {
       const response = await fetch(
-        `http://localhost:3333/tags?_page=${page}&_per_page=10`,
+        `http://localhost:3333/tags?_page=${page}&_per_page=10&title=${urlFilter}`,
       )
       const data = await response.json()
 
@@ -52,6 +56,17 @@ export function App() {
     },
     placeholderData: keepPreviousData,
   })
+
+  function handleFilter(event: FormEvent) {
+    event.preventDefault()
+
+    setSearchParams((params) => {
+      params.set('page', '1')
+      params.set('filter', filter)
+
+      return params
+    })
+  }
 
   if (isLoading) {
     return null
@@ -73,10 +88,21 @@ export function App() {
         </div>
 
         <div className="flex items-center justify-between">
-          <Input variant="filter">
-            <Search className="size-3" />
-            <Control placeholder="Search tags" />
-          </Input>
+          <form onSubmit={handleFilter} className="flex items-center gap-3">
+            <Input variant="filter">
+              <Search className="size-3" />
+              <Control
+                placeholder="Search tags"
+                onChange={(e) => setFilter(e.target.value)}
+                value={filter}
+              />
+            </Input>
+
+            <Button type="submit">
+              <Filter className="size-4" />
+              Filter
+            </Button>
+          </form>
 
           <Button>
             <FileDown className="size-4" />
